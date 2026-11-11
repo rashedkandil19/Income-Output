@@ -3,6 +3,7 @@
 
   var CURRENCY = "EGP";
   var WEEK_START = 6; // Saturday
+
   var cfg = window.APP_CONFIG || {};
   var sb = null;
   var user = null;
@@ -82,13 +83,14 @@
   }
 
   // =========================================================
-  // DATES
+  // DATE / TIME
   // =========================================================
 
   function pad(n) {
     return n < 10 ? "0" + n : "" + n;
   }
 
+  // YYYY-MM-DD
   function ymd(d) {
     return (
       d.getFullYear() +
@@ -99,9 +101,72 @@
     );
   }
 
+  // YYYY-MM-DDTHH:mm
+  function dateTimeLocal(d) {
+    return (
+      d.getFullYear() +
+      "-" +
+      pad(d.getMonth() + 1) +
+      "-" +
+      pad(d.getDate()) +
+      "T" +
+      pad(d.getHours()) +
+      ":" +
+      pad(d.getMinutes())
+    );
+  }
+
+  // Convert stored date/time into readable format
+  // Example: 11/11/2026 19:35
+  function formatDateTime(value) {
+    if (!value) return "";
+
+    var d = new Date(value);
+
+    if (isNaN(d.getTime())) {
+      return String(value);
+    }
+
+    return (
+      pad(d.getDate()) +
+      "/" +
+      pad(d.getMonth() + 1) +
+      "/" +
+      d.getFullYear() +
+      " " +
+      pad(d.getHours()) +
+      ":" +
+      pad(d.getMinutes())
+    );
+  }
+
+  // Convert stored timestamp into YYYY-MM-DD for chart grouping
+  function formatDateOnly(value) {
+    if (!value) return "";
+
+    var d = new Date(value);
+
+    if (isNaN(d.getTime())) {
+      return String(value).slice(0, 10);
+    }
+
+    return ymd(d);
+  }
+
   function parse(s) {
-    var p = s.split("-");
-    return new Date(+p[0], +p[1] - 1, +p[2]);
+    var d = new Date(s);
+
+    if (!isNaN(d.getTime())) {
+      return d;
+    }
+
+    var p = String(s).split("-");
+
+    return new Date(
+      +p[0],
+      +p[1] - 1,
+      +p[2]
+    );
   }
 
   function addDays(d, n) {
@@ -118,7 +183,11 @@
   }
 
   function monthKey(d) {
-    return d.getFullYear() + "-" + pad(d.getMonth() + 1);
+    return (
+      d.getFullYear() +
+      "-" +
+      pad(d.getMonth() + 1)
+    );
   }
 
   var MONTHS = [
@@ -136,11 +205,15 @@
     "Dec"
   ];
 
-  function bucketKey(dateStr, v) {
-    var d = parse(dateStr);
+  // =========================================================
+  // CHART BUCKETS
+  // =========================================================
+
+  function bucketKey(dateValue, v) {
+    var d = parse(dateValue);
 
     if (v === "day") {
-      return dateStr;
+      return ymd(d);
     }
 
     if (v === "week") {
@@ -185,7 +258,11 @@
           label:
             pad(d.getDate()) +
             " " +
-            MONTHS[d.getMonth()],
+            MONTHS[d.getMonth()] +
+            " – " +
+            pad(end.getDate()) +
+            " " +
+            MONTHS[end.getMonth()],
           long:
             pad(d.getDate()) +
             " " +
@@ -289,7 +366,11 @@
   // =========================================================
 
   function sums(v) {
-    var key = bucketKey(ymd(new Date()), v);
+    var key = bucketKey(
+      dateTimeLocal(new Date()),
+      v
+    );
+
     var inn = 0;
     var out = 0;
 
@@ -422,7 +503,7 @@
       );
     }
 
-    return String(n);
+    return String(Math.round(n));
   }
 
   function renderChart() {
@@ -627,8 +708,7 @@
     rows += "</tbody>";
 
     if ($("chartTable")) {
-      $("chartTable").innerHTML =
-        rows;
+      $("chartTable").innerHTML = rows;
     }
   }
 
@@ -732,9 +812,8 @@
               (e.at
                 ? " · " +
                   esc(
-                    e.at.slice(
-                      0,
-                      10
+                    formatDateTime(
+                      e.at
                     )
                   )
                 : "")
@@ -743,7 +822,7 @@
           return (
             "<tr>" +
             "<td>" +
-            esc(e.date) +
+            formatDateTime(e.date) +
             "</td>" +
             '<td><span class="pill ' +
             e.kind +
@@ -770,7 +849,7 @@
             "<td>" +
             change +
             "</td>" +
-            '<td>' +
+            "<td>" +
             '<button type="button" class="act" data-edit="' +
             e.id +
             '">Edit</button> ' +
@@ -802,17 +881,23 @@
   function mapRow(r) {
     return {
       id: r.id,
+
+      // IMPORTANT:
+      // entry_date must be timestamptz in Supabase
       date: r.entry_date,
+
       kind: r.kind,
       qty: Number(r.qty),
       item: r.item,
       size: r.size || "",
       price: Number(r.price),
       total: Number(r.total),
+
       by:
         r.updated_by ||
         r.created_by ||
         "",
+
       at:
         r.updated_at ||
         r.created_at ||
@@ -833,12 +918,9 @@
       return sb
         .from("entries")
         .select("*")
-        .order(
-          "entry_date",
-          {
-            ascending: false
-          }
-        )
+        .order("entry_date", {
+          ascending: false
+        })
         .order("id", {
           ascending: false
         })
@@ -878,7 +960,7 @@
       .catch(function (e) {
         setStatus(
           "Could not load data: " +
-            (e.message || e)
+          (e.message || e)
         );
       });
   }
@@ -905,8 +987,9 @@
   function resetForm() {
     editingId = null;
 
+    // Set current date + current time
     $("fDate").value =
-      ymd(new Date());
+      dateTimeLocal(new Date());
 
     $("fKind").value = "in";
 
@@ -939,7 +1022,17 @@
 
     editingId = id;
 
-    $("fDate").value = e.date;
+    // Convert stored timestamp to local datetime-local value
+    var d = new Date(e.date);
+
+    if (!isNaN(d.getTime())) {
+      $("fDate").value =
+        dateTimeLocal(d);
+    } else {
+      $("fDate").value =
+        String(e.date).slice(0, 16);
+    }
+
     $("fKind").value = e.kind;
     $("fQty").value = e.qty;
     $("fItem").value = e.item;
@@ -980,23 +1073,49 @@
     var item =
       $("fItem").value.trim();
 
+    var dateValue =
+      $("fDate").value;
+
     if (
       !item ||
       !(qty >= 0) ||
-      !(price >= 0)
+      !(price >= 0) ||
+      !dateValue
     ) {
+      return;
+    }
+
+    /*
+      datetime-local gives:
+      2026-11-11T19:35
+
+      Convert it to ISO timestamp before
+      sending it to Supabase.
+    */
+    var localDate =
+      new Date(dateValue);
+
+    if (isNaN(localDate.getTime())) {
+      setStatus(
+        "Invalid date or time."
+      );
       return;
     }
 
     var row = {
       entry_date:
-        $("fDate").value,
+        localDate.toISOString(),
+
       kind:
         $("fKind").value,
+
       qty: qty,
+
       item: item,
+
       size:
         $("fSize").value.trim(),
+
       price: price
     };
 
@@ -1036,7 +1155,7 @@
       .catch(function (e) {
         setStatus(
           "Could not save: " +
-            (e.message || e)
+          (e.message || e)
         );
       })
       .then(function () {
@@ -1060,6 +1179,7 @@
           "data-edit"
         )
       );
+
       return;
     }
 
@@ -1101,7 +1221,7 @@
       .catch(function (e) {
         setStatus(
           "Could not delete: " +
-            (e.message || e)
+          (e.message || e)
         );
       });
   }
@@ -1114,6 +1234,7 @@
     var rows = [
       [
         "date",
+        "time",
         "type",
         "qty",
         "item",
@@ -1127,18 +1248,31 @@
     entries
       .slice()
       .sort(function (a, b) {
-        return a.date < b.date
-          ? -1
-          : a.date > b.date
-          ? 1
-          : a.id - b.id;
+        return (
+          new Date(a.date) -
+          new Date(b.date)
+        );
       })
       .forEach(function (e) {
+        var d = new Date(e.date);
+
         rows.push([
-          e.date,
+          d.toLocaleDateString(
+            "en-GB"
+          ),
+
+          d.toLocaleTimeString(
+            "en-GB",
+            {
+              hour: "2-digit",
+              minute: "2-digit"
+            }
+          ),
+
           e.kind === "in"
             ? "income"
             : "output",
+
           e.qty,
           e.item,
           e.size,
@@ -1272,8 +1406,6 @@
           return;
         }
 
-        // IMPORTANT:
-        // Force dashboard immediately.
         showApp();
 
         $("lPass").value = "";
@@ -1302,10 +1434,8 @@
   // =========================================================
 
   function init() {
-    // Force our auth CSS before doing anything.
     forceLoginStyles();
 
-    // Make sure initial state is Login.
     showLogin();
 
     // -----------------------------------------
@@ -1313,7 +1443,7 @@
     // -----------------------------------------
 
     $("fDate").value =
-      ymd(new Date());
+      dateTimeLocal(new Date());
 
     $("fQty").addEventListener(
       "input",
@@ -1482,7 +1612,7 @@
       ) {
         setUser(
           session &&
-            session.user
+          session.user
         );
       }
     );
