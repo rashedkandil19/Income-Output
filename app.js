@@ -118,27 +118,23 @@
 
   // Convert stored date/time into readable format
   // Example: 11/11/2026 19:35
-  function formatDateTime(value) {
-    if (!value) return "";
+function formatDateTime(value) {
+  if (!value) return "";
 
-    var d = new Date(value);
+  const d = new Date(value);
 
-    if (isNaN(d.getTime())) {
-      return String(value);
-    }
+  if (isNaN(d.getTime())) return value;
 
-    return (
-      pad(d.getDate()) +
-      "/" +
-      pad(d.getMonth() + 1) +
-      "/" +
-      d.getFullYear() +
-      " " +
-      pad(d.getHours()) +
-      ":" +
-      pad(d.getMinutes())
-    );
-  }
+  return d.toLocaleString("en-GB", {
+    timeZone: "Africa/Cairo",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true
+  }).replace(",", "");
+}
 
   // Convert stored timestamp into YYYY-MM-DD for chart grouping
   function formatDateOnly(value) {
@@ -1104,7 +1100,7 @@
 
     var row = {
       entry_date:
-        localDate.toISOString(),
+         new Date($("fDate").value).toISOString(),
 
       kind:
         $("fKind").value,
