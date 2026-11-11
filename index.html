@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Income & Output Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Login -->
+  <section id="login" class="login" hidden>
+    <form id="loginForm" class="panel login-card">
+      <h1>Income &amp; Output</h1>
+      <p class="muted">Sign in.</p>
+      <div class="field">
+        <label for="lEmail">Email</label>
+        <input type="email" id="lEmail" autocomplete="username" required>
+      </div>
+      <div class="field">
+        <label for="lPass">Password</label>
+        <input type="password" id="lPass" autocomplete="current-password" required>
+      </div>
+      <button type="submit" class="primary" id="lBtn">Sign in</button>
+      <p id="loginMsg" class="msg" role="alert" hidden></p>
+    </form>
+  </section>
+
+  <!-- App -->
+  <div id="app" hidden>
+    <header class="top">
+      <h1>Income &amp; Output</h1>
+      <div class="top-actions">
+        <span class="muted" id="who"></span>
+        <button type="button" id="btnExport" class="ghost">Export CSV</button>
+        <button type="button" id="btnLogout" class="ghost">Sign out</button>
+      </div>
+    </header>
+
+    <main>
+      <p id="status" class="msg" role="alert" hidden></p>
+
+      <section class="cards" aria-label="Summary">
+        <article class="card" id="cardDay"></article>
+        <article class="card" id="cardWeek"></article>
+        <article class="card" id="cardMonth"></article>
+      </section>
+
+      <section class="panel" id="formPanel">
+        <h2 id="formTitle">Add entry</h2>
+        <form id="entryForm" autocomplete="off">
+          <div class="field">
+            <label for="fDate">Date</label>
+            <input type="date" id="fDate" required>
+          </div>
+          <div class="field">
+            <label for="fKind">Type</label>
+            <select id="fKind">
+              <option value="in">Income (input)</option>
+              <option value="out">Expense (output)</option>
+            </select>
+          </div>
+          <div class="field small">
+            <label for="fQty">Qty</label>
+            <input type="number" id="fQty" min="0" step="any" value="1" required>
+          </div>
+          <div class="field grow">
+            <label for="fItem">Item</label>
+            <input type="text" id="fItem" placeholder="ختم / دفتر / طباعه" required>
+          </div>
+          <div class="field">
+            <label for="fSize">Size / details</label>
+            <input type="text" id="fSize" placeholder="المقاس / اللون / النوع" required>
+          </div>
+          <div class="field">
+            <label for="fPrice">Price each (EGP)</label>
+            <input type="number" id="fPrice" min="0" step="any" placeholder="السعر" required>
+          </div>
+          <div class="field total">
+            <span class="lbl">Total</span>
+            <output id="fTotal">0 EGP</output>
+          </div>
+          <button type="submit" class="primary" id="fSubmit">Add</button>
+          <button type="button" class="ghost" id="fCancel" hidden>Cancel</button>
+        </form>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2 id="chartTitle">Income vs output</h2>
+          <div class="seg" role="tablist" aria-label="Period">
+            <button type="button" role="tab" data-view="day" aria-selected="false">Days</button>
+            <button type="button" role="tab" data-view="week" aria-selected="true">Weeks</button>
+            <button type="button" role="tab" data-view="month" aria-selected="false">Months</button>
+          </div>
+        </div>
+        <div class="legend">
+          <span><i class="sw in"></i>Income</span>
+          <span><i class="sw out"></i>Output</span>
+        </div>
+        <div class="chart-wrap" id="chartWrap">
+          <svg id="chart" role="img" aria-label="Income and output chart"></svg>
+          <div id="tip" class="tip" hidden></div>
+        </div>
+        <details class="table-view">
+          <summary>Show chart as table</summary>
+          <div class="scroll"><table id="chartTable"></table></div>
+        </details>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Entries</h2>
+          <input type="search" id="search" placeholder="Search item or size">
+        </div>
+        <div class="scroll">
+          <table id="entries">
+            <thead>
+              <tr>
+                <th>Date</th><th>Type</th><th class="num">Qty</th><th>Item</th><th>Size</th>
+                <th class="num">Price</th><th class="num">Total</th><th>Last change</th><th></th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <p id="empty" class="empty" hidden>No entries yet. Add your first one above, for example: 1 stamp 4.5cm 650 EGP.</p>
+      </section>
+    </main>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
